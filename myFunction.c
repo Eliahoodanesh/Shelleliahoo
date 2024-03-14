@@ -1,31 +1,8 @@
 #include "myFunction.h"
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-
-#define BUFF_SIZE 1024
-
-void bold()
-{
-    printf("\033[1m");
-}
-
-void blue()
-{
-    printf("\033[34m");
-}
-
-void reset()
-{
-    printf("\033[0m");
-}
-
-
-
+#include <pwd.h>
 
 char *getInputFromUser()
 {
@@ -49,10 +26,10 @@ char **splitArgument(char *str)
     char *subStr;
     int size = 2;
     int index = 0;
-    subStr = strtok(str, " ");
+    subStr = strtok(str, " \0 ");
     char **argumnts = (char **)malloc(size * sizeof(char *));
     *(argumnts + index) = subStr;
-    while ((subStr = strtok(NULL, " ")) != NULL)
+    while ((subStr = strtok(NULL, " \0 ")) != NULL)
     {
         size++;
         index++;
@@ -63,44 +40,27 @@ char **splitArgument(char *str)
 
     return argumnts;
 }
-
-
-void getLocation()
-{
+void getLocation() {
     char location[BUFF_SIZE];
+    char username[BUFF_SIZE];
 
-    if (getcwd(location, BUFF_SIZE) == NULL)
-    {
+    struct passwd *pw = getpwuid(getuid());
+    if (!pw) {
+        perror("getpwuid");
+        exit(EXIT_FAILURE);
+}
+    const char * user = pw->pw_name;
+
+    if (getcwd(location, BUFF_SIZE) == NULL) {
         puts("Error");
-    }
-    else
-    {
-        // הדפסת נתיב התיקייה הנוכחית
-        bold();
-        blue();
-        printf("%s", location);
-        reset();
-        printf("$ ");
-        
-        // הדפסת שם המשתמש
-        struct passwd *pw = getpwuid(getuid());
-        if (pw != NULL)
-        {
-            printf("%s", pw->pw_name);
-        }
-        
-        // הדפסת שם המחשב
-        struct utsname unameData;
-        if (uname(&unameData) != -1)
-        {
-            printf("@%s", unameData.nodename);
-        }
-        
-        // הדפסת התו הנוסף לסיום השורה
-        printf(": ");
+}   else {
+    bold();
+    blue();
+    printf("%s@%s:", user, location);
+    reset();
+    printf("$");
     }
 }
-
 
 void logout(char *input)
 {
@@ -210,40 +170,4 @@ void mypipe(char **argv1, char **argv2)
         /* standard input now comes from pipe */
         execvp(argv2[0], argv2);
     }
-}
-
-
-
-// אני הוספתי
-int main()
-{
-    char *input;
-    char **arguments;
-
-    while (1)
-    {
-        getLocation();
-        input = getInputFromUser();
-        arguments = splitArgument(input);
-
-        // הוספת קוד לטיפול במצבים שונים, לדוגמה:
-        // if (arguments[0] == "logout")
-        // {
-        //     logout(input);
-        // }
-        // else if (arguments[0] == "echo")
-        // {
-        //     echo(arguments);
-        // }
-        // else if (arguments[0] == "cd")
-        // {
-        //     cd(arguments);
-        // }
-        // וכן הלאה עבור כל פקודה אחרת...
-
-        free(input);
-        free(arguments);
-    }
-
-    return 0;
 }
